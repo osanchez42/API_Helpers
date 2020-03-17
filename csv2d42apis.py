@@ -1,4 +1,4 @@
-'''
+"""
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -6,7 +6,7 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-'''
+"""
 
 ############################################################################################
 # csv file to api helper utility v2.1 that uploads data to device42 via REST APIs
@@ -14,49 +14,56 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # step 2: Change lines 26-31
 # step 3: Execute the script
 ############################################################################################
-import urllib2
-import urllib
-import base64
+import requests
+from requests.exceptions import RequestException
+from requests.auth import HTTPBasicAuth
 import csv
 
-##### Change Following lines to match your environment #####
-### API URLS available at http://docs.device42.com/apis/ ###
+# Change Following lines to match your environment
+# API URLS available at http://docs.device42.com/apis/
 
-D42_API_URL = 'https://your-d42-fqdn-or-ip/api/1.0/custom_fields/appcomp/'  # make sure to end in /
+D42_API_URL = 'https://your-d42-fqdn-or-ip/api/1.0/device/'  # make sure to end in /
 D42_USERNAME = 'your-d42-username-here'
 D42_PASSWORD = 'your-d42-password-here'
-API_METHOD = 'put'                                                          # whether you are doing a put or post call.
-CSV_FILE_NAME = 'file_name.csv'                                             # name of the file with the values being uploaded
-DEBUG = True                                                                # True or False. True for detailed info per call
+API_METHOD = 'put'                                                    # whether you are doing a put or post call.
+CSV_FILE_NAME = 'file_name.csv'                                       # name of the file with the values being uploaded
+DEBUG = True                                                          # True or False. True for detailed info per call
 
 
 def post(params):
-    data = urllib.urlencode(params)
+
     headers = {
-        'Authorization': 'Basic ' + base64.b64encode(D42_USERNAME + ':' + D42_PASSWORD),
-        'Content-Type': 'application/x-www-form-urlencoded'}
-    req = urllib2.Request(D42_API_URL, data, headers)
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
     if DEBUG:
-        print '---REQUEST---', req.get_full_url()
+        print('---REQUEST---', D42_API_URL)
     if DEBUG:
-        print req.headers
+        print(headers)
     if DEBUG:
-        print req.data
-    if API_METHOD == 'put':
-        req.get_method = lambda: 'PUT'
+        print(params)
+
     try:
-        urllib2.urlopen(req)
-        return True, ''
-    except urllib2.HTTPError, httperror:
-        error_response = httperror.read()
+        if API_METHOD == 'put':
+            req = requests.put(D42_API_URL, data=params, headers=headers, auth=HTTPBasicAuth(D42_USERNAME, D42_PASSWORD), verify=False)
+        else:
+            req = requests.post(D42_API_URL, data=params, headers=headers, auth=HTTPBasicAuth(D42_USERNAME, D42_PASSWORD))
+        if req.status_code == 200:
+            print(req.text)
+            return True, ''
+        else:
+            print(req.status_code)
+            print(req.text)
+            return False, ''
+    except RequestException as e:
         if DEBUG:
-            print httperror.code, error_response
-        return False, error_response
+            print(e)
+        return False, e
 
 
 def to_ascii(string):  # not used in example, but provided incase you would need to convert certain values to ascii
     """remove non-ascii characters"""
-    if isinstance(string, basestring):
+    if isinstance(string, str):
         return string.encode('ascii', 'ignore')
     else:
         return str(string)
@@ -71,24 +78,25 @@ def changerow_to_api_args(row_values, header_row):
 
 
 def read_csv_and_call_api_function(filename):
-    notadded = []
-    added = []
-    with open(filename, 'rb') as csvfile:
+    failed = []
+    success = []
+    with open(filename, 'r') as csvfile:
         readline = csv.reader(csvfile)
-        header_row = readline.next()
+        header_row = next(readline)
         for i in readline:
             if i:
                 try:
                     args = changerow_to_api_args(i, header_row)
                     added, msg = post(args)
                     if added:
-                        added.append(i)
+                        success.append(i)
                     else:
-                        notadded.append(i + [' ', msg])
-                except Exception, err:
-                    notadded.append(i + [str(err), ])
-    print 'notadded %s' % notadded
-    print 'added %s' % added
+                        failed.append(i + [' ', msg])
+                except Exception as err:
+                    failed.append(i + [str(err), ])
+    print('---DONE---')
+    print('Failed', failed)
+    print('Success', success)
 
 
 read_csv_and_call_api_function(CSV_FILE_NAME)

@@ -1,5 +1,4 @@
-name, key, value, value2, show_on_chart, notes
-, , test2,,,
-iis server, Backup location, ,c:\sql\, yes, test notes
-sqlserver92, backup location, ,\home\d42\bakcup\, no, what is in the notes?
-
+name, serial_no, type, os, cpupower, memory, hddsize, notes, tags
+test_device_1, IOJNSDGFS8F, physical, Windows, 3.5GHZ, 4096, 500, these are test notes for device 1, mock_device
+test_device_2, JSN65IJNSDF, physical, Linux, 3.5GHZ, 4096, 500, these are test notes for device 2, mock_device
+test_device_3, L89ASDF8YUN, physical, Windows, 3.5GHZ, 4096, 500, these are test notes for device 3, mock_device
